@@ -109,6 +109,45 @@ npm run lint
 npm run format
 ```
 
+### Docker
+
+The bot is available as a Docker container on GitHub Container Registry.
+
+#### Running with Docker
+
+**Run the bot (default mode):**
+```bash
+docker run --rm \
+  -e DISCORD_TOKEN=your_bot_token \
+  -e APPLICATION_ID=your_application_id \
+  -e SETTINGS_JSON='{"vxtBot":"1015497909925580830","guild":"your_guild_id","errorChannel":null,"retweetReaction":"1467831704046670080","channels":{"channel_id":{"sender":"webhook_id"}}}' \
+  ghcr.io/anatawa12/anyhelp-tweet-manager:latest
+```
+
+**Process existing messages:**
+```bash
+docker run --rm \
+  -e DISCORD_TOKEN=your_bot_token \
+  -e APPLICATION_ID=your_application_id \
+  -e SETTINGS_JSON='{"vxtBot":"1015497909925580830","guild":"your_guild_id","errorChannel":null,"retweetReaction":"1467831704046670080","channels":{"channel_id":{"sender":"webhook_id"}}}' \
+  ghcr.io/anatawa12/anyhelp-tweet-manager:latest \
+  -c channel_id -n 50
+```
+
+**Environment Variables:**
+- `DISCORD_TOKEN`: Your Discord bot token (required)
+- `APPLICATION_ID`: Your application ID (required)
+- `SETTINGS_JSON`: JSON string containing your settings (optional if you mount a settings.json file)
+
+**Alternative: Mount settings.json file:**
+```bash
+docker run --rm \
+  -e DISCORD_TOKEN=your_bot_token \
+  -e APPLICATION_ID=your_application_id \
+  -v /path/to/settings.json:/app/settings.json \
+  ghcr.io/anatawa12/anyhelp-tweet-manager:latest
+```
+
 ### Production
 
 1. Build the project:

@@ -57,21 +57,49 @@ async function main() {
 			process.exit(1);
 		}
 
-		// Fetch messages
-		console.log(`Fetching ${options.count} messages...`);
-		const messages = await channel.messages.fetch({ limit: options.count });
+		// Fetch messages with pagination support
+		console.log(`Fetching up to ${options.count} messages...`);
+		const allMessages = new Map<string, any>();
+		let remaining = options.count;
+		let lastMessageId: string | undefined = undefined;
 
-		console.log(`Fetched ${messages.size} messages`);
+		while (remaining > 0) {
+			const batchSize = Math.min(remaining, 100);
+			const fetchOptions: { limit: number; before?: string } = { limit: batchSize };
+			if (lastMessageId) {
+				fetchOptions.before = lastMessageId;
+			}
+
+			const batch = await channel.messages.fetch(fetchOptions);
+			if (batch.size === 0) break; // No more messages available
+
+			// Add messages to the collection
+			for (const [id, msg] of batch) {
+				allMessages.set(id, msg);
+			}
+
+			remaining -= batch.size;
+			lastMessageId = batch.last()?.id;
+
+			console.log(`Fetched ${allMessages.size} messages so far...`);
+
+			// If we got fewer messages than requested, we've reached the end
+			if (batch.size < batchSize) break;
+		}
+
+		console.log(`Fetched ${allMessages.size} messages total`);
 
 		// Filter messages from VXT bot that are replies
-		const vxtMessages = messages.filter((msg) => msg.author.id === config.vxtBot && msg.reference);
+		const vxtMessages = Array.from(allMessages.values()).filter(
+			(msg) => msg.author.id === config.vxtBot && msg.reference,
+		);
 
-		console.log(`Found ${vxtMessages.size} VXT reply messages to process`);
+		console.log(`Found ${vxtMessages.length} VXT reply messages to process`);
 
 		// Process each message sequentially to avoid Discord API rate limits
 		let processed = 0;
-		for (const [, message] of vxtMessages) {
-			console.log(`Processing message ${++processed}/${vxtMessages.size}...`);
+		for (const message of vxtMessages) {
+			console.log(`Processing message ${++processed}/${vxtMessages.length}...`);
 			// Use stderr-only error reporter for CLI - do not send to Discord
 			await processVxtMessage(client, config, message, options.channel, async (msg, link) => {
 				console.error(`Error: ${msg}${link ? ` - ${link}` : ""}`);

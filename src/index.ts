@@ -11,7 +11,8 @@ import {
 	type User,
 } from "discord.js";
 import { loadConfig } from "./config.js";
-import { detectRetweet, extractTweetId, extractTweetUrl, getEmbedAuthorName, waitForEmbed } from './utils.js';
+import { processVxtMessage, reportError } from "./handlers.js";
+import { extractTweetId, getEmbedAuthorName, waitForEmbed } from "./utils.js";
 
 // Load configuration
 const config = await loadConfig();
@@ -28,23 +29,6 @@ const client = new Client({
 });
 
 /**
- * Sends error message to configured error channel
- */
-async function reportError(message: string, link?: string): Promise<void> {
-	if (!config.errorChannel) return;
-
-	try {
-		const errorChannel = await client.channels.fetch(config.errorChannel);
-		if (!errorChannel || !errorChannel.isTextBased() || errorChannel.isDMBased()) return;
-
-		const errorMsg = link ? `${message}\n${link}` : message;
-		await errorChannel.send(errorMsg);
-	} catch (error) {
-		console.error("Failed to send error report:", error);
-	}
-}
-
-/**
  * Handles new messages to detect and process VXT replies
  */
 async function handleMessage(message: Message): Promise<void> {
@@ -55,56 +39,8 @@ async function handleMessage(message: Message): Promise<void> {
 	// Check if message is from VXT bot
 	if (message.author.id !== config.vxtBot) return;
 
-	// Check if this is a reply
-	if (!message.reference || !message.reference.messageId) return;
-
-	try {
-		// Get the original message
-		const originalMessage = await message.channel.messages.fetch(message.reference.messageId);
-
-		// Check if original message is from the configured sender
-		if (channelConfig.sender !== null && originalMessage.author.id !== channelConfig.sender) return;
-
-		// Extract tweet URL from original message
-		const tweetUrl = extractTweetUrl(originalMessage.content);
-		if (!tweetUrl) {
-			console.log(`No tweet URL found in original message: ${originalMessage.url}`);
-			return;
-		}
-
-		// Wait for embed to be available on VXT reply
-		const messageWithEmbed = await waitForEmbed(message);
-
-		if (!messageWithEmbed || messageWithEmbed.embeds.length === 0) {
-			console.log(`No embed found after waiting: ${message.url}`);
-			return;
-		}
-
-		// Get the first embed
-		const embed = messageWithEmbed.embeds[0];
-
-		// Detect if it's a retweet
-		const retweetStatus = detectRetweet(tweetUrl, embed);
-
-		if (retweetStatus === "retweet") {
-			console.log(`Retweet detected: ${message.url}`);
-			// React with configured emoji on original tweet
-			await originalMessage.react(config.retweetReaction);
-			// React with ❌ on VXT reply
-			await messageWithEmbed.react("❌");
-		} else if (retweetStatus === "unknown") {
-			console.log(`Unknown tweet type, reporting for manual check: ${message.url}`);
-			// Report error for manual check
-			const vxtMessageLink = `https://discord.com/channels/${message.guildId}/${message.channelId}/${message.id}`;
-			await reportError("Cannot determine if tweet is retweet or not. Manual check required.", vxtMessageLink);
-		} else {
-			console.log(`Original tweet detected, no action taken: ${message.url}`);
-			// If it's original, do nothing
-		}
-	} catch (error) {
-		console.error("Error handling message:", error);
-		await reportError(`Error processing message: ${error instanceof Error ? error.message : String(error)}`);
-	}
+	// Process the VXT message
+	await processVxtMessage(client, config, message, message.channelId);
 }
 
 /**
@@ -195,7 +131,11 @@ async function handleReaction(
 		await thread.send(`<@${user.id}>`);
 	} catch (error) {
 		console.error("Error creating thread:", error);
-		await reportError(`Error creating thread: ${error instanceof Error ? error.message : String(error)}`);
+		await reportError(
+			client,
+			config,
+			`Error creating thread: ${error instanceof Error ? error.message : String(error)}`,
+		);
 	}
 }
 

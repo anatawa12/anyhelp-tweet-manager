@@ -1,4 +1,4 @@
-import { Embed, Message } from 'discord.js';
+import { Embed, Message } from "discord.js";
 
 /**
  * Extracts tweet ID from a Twitter/X URL
@@ -53,6 +53,10 @@ export function detectRetweet(tweetUrl: string, embed: Embed): "retweet" | "orig
  * @returns Message with embed or null if not found
  */
 export async function waitForEmbed(message: Message): Promise<Message | null> {
+	if (message.embeds.length > 0) {
+		return message;
+	}
+
 	await new Promise((resolve) => setTimeout(resolve, 1000));
 	let fetchedMessage = await message.channel.messages.fetch(message.id);
 

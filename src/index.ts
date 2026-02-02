@@ -84,7 +84,7 @@ async function handleMessage(message: Message): Promise<void> {
 		const embed = messageWithEmbed.embeds[0];
 
 		// Detect if it's a retweet
-		const retweetStatus = detectRetweet(embed.toJSON());
+		const retweetStatus = detectRetweet(tweetUrl, embed);
 
 		if (retweetStatus === "retweet") {
 			console.log(`Retweet detected: ${message.url}`);

@@ -1,4 +1,4 @@
-import type { APIEmbed, Message } from "discord.js";
+import { APIEmbed, Embed, Message } from 'discord.js';
 
 /**
  * Extracts tweet ID from a Twitter/X URL
@@ -31,7 +31,7 @@ export function extractTweetUrl(content: string): string | null {
  * @param embed - Discord embed from fxtwitter
  * @returns "retweet" | "original" | "unknown"
  */
-export function detectRetweet(embed: APIEmbed): "retweet" | "original" | "unknown" {
+export function detectRetweet(tweetUrl: string, embed: Embed): "retweet" | "original" | "unknown" {
 	// Get tweet ID from embed root URL
 	const rootUrl = embed.url;
 	if (!rootUrl) return "unknown";
@@ -39,15 +39,12 @@ export function detectRetweet(embed: APIEmbed): "retweet" | "original" | "unknow
 	const rootTweetId = extractTweetId(rootUrl);
 	if (!rootTweetId) return "unknown";
 
-	// Get tweet ID from embed author URL
-	const authorUrl = embed.author?.url;
-	if (!authorUrl) return "unknown";
-
-	const authorTweetId = extractTweetId(authorUrl);
-	if (!authorTweetId) return "unknown";
+	// Get tweet ID from source URL in the message content
+	const contentTweetId = extractTweetId(tweetUrl);
+	if (!contentTweetId) return "unknown";
 
 	// If IDs are different, it's a retweet
-	return rootTweetId === authorTweetId ? "original" : "retweet";
+	return rootTweetId === contentTweetId ? "original" : "retweet";
 }
 
 /**

@@ -143,7 +143,7 @@ async function handleReaction(
 client.on("messageCreate", handleMessage);
 client.on("messageReactionAdd", handleReaction);
 
-client.on("ready", () => {
+client.on("clientReady", () => {
 	console.log(`Logged in as ${client.user?.tag}`);
 });
 

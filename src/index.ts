@@ -11,7 +11,7 @@ import {
 	type User,
 } from "discord.js";
 import { loadConfig } from "./config.js";
-import { detectRetweet, extractTweetUrl, getEmbedAuthorName, waitForEmbed } from "./utils.js";
+import { detectRetweet, extractTweetId, extractTweetUrl, getEmbedAuthorName, waitForEmbed } from './utils.js';
 
 // Load configuration
 const config = await loadConfig();
@@ -142,7 +142,7 @@ async function handleReaction(
 			return;
 		}
 	} else {
-		fullMessage = message as Message;
+		fullMessage = message;
 	}
 
 	// Check if message is in a monitored channel
@@ -169,11 +169,13 @@ async function handleReaction(
 		const embed = messageWithEmbed.embeds[0];
 
 		// Get author name from embed
-		const authorName = getEmbedAuthorName(embed.toJSON());
+		const authorName = getEmbedAuthorName(embed);
 		if (!authorName) {
 			console.log("No author name found in embed");
 			return;
 		}
+
+		const tweetId = extractTweetId(fullMessage.content);
 
 		// Create thread with author name
 		if (fullMessage.channel.type !== ChannelType.GuildText) {
@@ -187,8 +189,7 @@ async function handleReaction(
 		});
 
 		// Send initial message with VXT tweet link
-		const messageLink = `https://discord.com/channels/${fullMessage.guildId}/${fullMessage.channelId}/${fullMessage.id}`;
-		await thread.send(messageLink);
+		await thread.send(`https://fxtwitter.com/i/status/${tweetId}`);
 
 		// Mention the user to invite them
 		await thread.send(`<@${user.id}>`);

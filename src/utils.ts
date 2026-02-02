@@ -1,4 +1,4 @@
-import { APIEmbed, Embed, Message } from 'discord.js';
+import { Embed, Message } from 'discord.js';
 
 /**
  * Extracts tweet ID from a Twitter/X URL
@@ -86,6 +86,6 @@ export async function waitForEmbed(message: Message): Promise<Message | null> {
  * @param embed - Discord embed
  * @returns Author name or null
  */
-export function getEmbedAuthorName(embed: APIEmbed): string | null {
+export function getEmbedAuthorName(embed: Embed): string | null {
 	return embed.author?.name || null;
 }

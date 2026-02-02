@@ -1,17 +1,17 @@
 import process from "node:process";
 import {
+	ChannelType,
 	Client,
 	GatewayIntentBits,
-	Partials,
 	type Message,
 	type MessageReaction,
-	type User,
-	type PartialUser,
 	type PartialMessageReaction,
-	ChannelType,
+	Partials,
+	type PartialUser,
+	type User,
 } from "discord.js";
 import { loadConfig } from "./config.js";
-import { extractTweetUrl, waitForEmbed, detectRetweet, getEmbedAuthorName } from "./utils.js";
+import { detectRetweet, extractTweetUrl, getEmbedAuthorName, waitForEmbed } from "./utils.js";
 
 // Load configuration
 const config = await loadConfig();

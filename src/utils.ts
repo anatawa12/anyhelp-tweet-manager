@@ -1,4 +1,4 @@
-import type { Message, APIEmbed } from "discord.js";
+import type { APIEmbed, Message } from "discord.js";
 
 /**
  * Extracts tweet ID from a Twitter/X URL
@@ -59,7 +59,7 @@ export async function waitForEmbed(message: Message): Promise<Message | null> {
 	// Wait 5 seconds and fetch
 	await new Promise((resolve) => setTimeout(resolve, 5000));
 
-	let fetchedMessage = await message.channel.messages.fetch({ message: message.id, force: true });
+	let fetchedMessage = await message.channel.messages.fetch(message.id);
 
 	if (fetchedMessage.embeds.length > 0) {
 		return fetchedMessage;
@@ -68,7 +68,7 @@ export async function waitForEmbed(message: Message): Promise<Message | null> {
 	// Wait another 10 seconds and try again
 	await new Promise((resolve) => setTimeout(resolve, 10000));
 
-	fetchedMessage = await message.channel.messages.fetch({ message: message.id, force: true });
+	fetchedMessage = await message.channel.messages.fetch(message.id);
 
 	if (fetchedMessage.embeds.length > 0) {
 		return fetchedMessage;

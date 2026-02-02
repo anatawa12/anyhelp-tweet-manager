@@ -141,11 +141,19 @@ async function main() {
 
 		console.log(`Found ${vxtMessages.size} VXT reply messages to process`);
 
-		// Process each message
-		let processed = 0;
-		for (const [, message] of vxtMessages) {
-			console.log(`Processing message ${++processed}/${vxtMessages.size}...`);
-			await processVxtMessage(message);
+		// Process messages concurrently for better performance
+		const messageArray = Array.from(vxtMessages.values());
+		const results = await Promise.allSettled(
+			messageArray.map((message, index) => {
+				console.log(`Processing message ${index + 1}/${vxtMessages.size}...`);
+				return processVxtMessage(message);
+			}),
+		);
+
+		// Log any failures
+		const failures = results.filter((r) => r.status === "rejected");
+		if (failures.length > 0) {
+			console.error(`${failures.length} message(s) failed to process`);
 		}
 
 		console.log("Processing complete!");

@@ -20,7 +20,9 @@ RUN npm run build
 FROM node:22-slim
 
 # Install tini for proper signal handling
-RUN apt-get update && apt-get install -y --no-install-recommends tini && rm -rf /var/lib/apt/lists/*
+# Download tini static binary from GitHub releases
+ADD https://github.com/krallin/tini/releases/download/v0.19.0/tini /usr/bin/tini
+RUN chmod +x /usr/bin/tini
 
 WORKDIR /app
 

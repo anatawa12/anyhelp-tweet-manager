@@ -19,6 +19,9 @@ RUN npm run build
 # Runtime stage
 FROM node:22-slim
 
+# Install tini for proper signal handling
+RUN apt-get update && apt-get install -y --no-install-recommends tini && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy package files
@@ -34,5 +37,5 @@ COPY --from=builder /app/dist ./dist
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-# Set entrypoint
-ENTRYPOINT ["/docker-entrypoint.sh"]
+# Set tini as entrypoint to handle signals properly
+ENTRYPOINT ["/usr/bin/tini", "--", "/docker-entrypoint.sh"]

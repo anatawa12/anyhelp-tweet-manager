@@ -2,4 +2,5 @@
 !.env.example
 /node_modules
 /dist
+settings.json
 

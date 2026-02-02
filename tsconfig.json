@@ -1,0 +1,33 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig.json",
+	"compilerOptions": {
+		"allowSyntheticDefaultImports": true,
+		"alwaysStrict": true,
+		"esModuleInterop": true,
+		"importHelpers": false,
+		"incremental": true,
+		"lib": ["esnext"],
+		"newLine": "lf",
+		"noEmitHelpers": false,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitReturns": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"preserveConstEnums": true,
+		"pretty": true,
+		"removeComments": false,
+		"resolveJsonModule": true,
+		"sourceMap": true,
+		"strict": true,
+		"useDefineForClassFields": true,
+		"exactOptionalPropertyTypes": false,
+		"noImplicitOverride": true,
+		"declaration": false,
+		"declarationMap": false,
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"target": "ESNext",
+		"outDir": "dist",
+		"skipLibCheck": true
+	}
+}

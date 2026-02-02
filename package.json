@@ -1,0 +1,26 @@
+{
+	"$schema": "https://json.schemastore.org/package.json",
+	"name": "anyhelp-tweet-manager",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"lint": "biome check",
+		"format": "biome format --write",
+		"start": "node --env-file=.env dist/index.js"
+	},
+	"dependencies": {
+		"@discordjs/core": "^2.3.0",
+		"discord.js": "^14.24.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.3.13",
+		"@types/node": "^22.18.8",
+		"typescript": "~5.9.3",
+		"zod": "^3.25.76"
+	},
+	"engines": {
+		"node": ">=22.12.0"
+	}
+}

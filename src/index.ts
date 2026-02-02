@@ -11,7 +11,7 @@ import {
 	type User,
 } from "discord.js";
 import { loadConfig } from "./config.js";
-import { detectRetweet, extractTweetId, extractTweetUrl, getEmbedAuthorName, waitForEmbed } from './utils.js';
+import { detectRetweet, extractTweetId, extractTweetUrl, getEmbedAuthorName, waitForEmbed } from "./utils.js";
 
 // Load configuration
 const config = await loadConfig();

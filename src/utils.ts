@@ -1,4 +1,4 @@
-import { Embed, Message } from 'discord.js';
+import { Embed, Message } from "discord.js";
 
 /**
  * Extracts tweet ID from a Twitter/X URL

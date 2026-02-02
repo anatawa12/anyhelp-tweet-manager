@@ -8,7 +8,8 @@
 		"build": "tsc",
 		"lint": "biome check",
 		"format": "biome format --write",
-		"start": "node --env-file=.env dist/index.js"
+		"start": "node --env-file=.env dist/index.js",
+		"process-rt": "node --env-file=.env dist/process-rt.js"
 	},
 	"dependencies": {
 		"@discordjs/core": "^2.3.0",

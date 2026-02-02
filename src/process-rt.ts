@@ -72,7 +72,10 @@ async function main() {
 		let processed = 0;
 		for (const [, message] of vxtMessages) {
 			console.log(`Processing message ${++processed}/${vxtMessages.size}...`);
-			await processVxtMessage(client, config, message, options.channel);
+			// Use stderr-only error reporter for CLI - do not send to Discord
+			await processVxtMessage(client, config, message, options.channel, async (msg, link) => {
+				console.error(`Error: ${msg}${link ? ` - ${link}` : ""}`);
+			});
 		}
 
 		console.log("Processing complete!");

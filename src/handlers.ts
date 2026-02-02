@@ -3,7 +3,12 @@ import type { Config } from "./config.js";
 import { detectRetweet, extractTweetUrl, waitForEmbed } from "./utils.js";
 
 /**
- * Sends error message to configured error channel
+ * Error reporter function type
+ */
+export type ErrorReporter = (message: string, link?: string) => Promise<void>;
+
+/**
+ * Sends error message to configured error channel (for Discord bot usage)
  */
 export async function reportError(client: Client, config: Config, message: string, link?: string): Promise<void> {
 	if (!config.errorChannel) return;
@@ -27,6 +32,7 @@ export async function processVxtMessage(
 	config: Config,
 	message: Message,
 	channelId: string,
+	errorReporter?: ErrorReporter,
 ): Promise<void> {
 	const channelConfig = config.channels[channelId];
 	if (!channelConfig) return;
@@ -72,22 +78,30 @@ export async function processVxtMessage(
 			console.log(`Unknown tweet type, reporting for manual check: ${message.url}`);
 			// Report error for manual check
 			const vxtMessageLink = `https://discord.com/channels/${message.guildId}/${message.channelId}/${message.id}`;
-			await reportError(
-				client,
-				config,
-				"Cannot determine if tweet is retweet or not. Manual check required.",
-				vxtMessageLink,
-			);
+			if (errorReporter) {
+				await errorReporter("Cannot determine if tweet is retweet or not. Manual check required.", vxtMessageLink);
+			} else {
+				await reportError(
+					client,
+					config,
+					"Cannot determine if tweet is retweet or not. Manual check required.",
+					vxtMessageLink,
+				);
+			}
 		} else {
 			console.log(`Original tweet detected, no action taken: ${message.url}`);
 			// If it's original, do nothing
 		}
 	} catch (error) {
 		console.error("Error processing message:", error);
-		await reportError(
-			client,
-			config,
-			`Error processing message: ${error instanceof Error ? error.message : String(error)}`,
-		);
+		if (errorReporter) {
+			await errorReporter(`Error processing message: ${error instanceof Error ? error.message : String(error)}`);
+		} else {
+			await reportError(
+				client,
+				config,
+				`Error processing message: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
 	}
 }

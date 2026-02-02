@@ -19,10 +19,18 @@ RUN npm run build
 # Runtime stage
 FROM node:22-slim
 
+# Tini version and checksum
+ARG TINI_VERSION=v0.19.0
+ARG TINI_SHA256=93dcc18adc78c65a028a84799ecf8ad40c936fdfc5f2a57b1acda5a8117fa82c
+
 # Install tini for proper signal handling
-# Download tini static binary from GitHub releases
-ADD https://github.com/krallin/tini/releases/download/v0.19.0/tini /usr/bin/tini
-RUN chmod +x /usr/bin/tini
+# Download and verify tini static binary from GitHub releases
+RUN apt-get update && apt-get install -y --no-install-recommends curl && \
+    curl -fsSL https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini -o /usr/bin/tini && \
+    echo "${TINI_SHA256}  /usr/bin/tini" | sha256sum -c - && \
+    chmod +x /usr/bin/tini && \
+    apt-get purge -y --auto-remove curl && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

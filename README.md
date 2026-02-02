@@ -70,9 +70,10 @@ When users react to VXT messages with 👀 emoji:
      "vxtBot": "1015497909925580830",
      "guild": "your_guild_id",
      "errorChannel": "error_channel_id_or_null",
+     "retweetReaction": "1467831704046670080",
      "channels": {
        "channel_id_to_monitor": {
-         "sender": "webhook_user_id"
+         "sender": "webhook_user_id_or_null"
        }
      }
    }
@@ -83,7 +84,9 @@ When users react to VXT messages with 👀 emoji:
 - **vxtBot**: User ID of the bot that applies fxtwitter (VXT bot)
 - **guild**: Your Discord server/guild ID
 - **errorChannel**: Channel ID for error reporting (set to `null` to disable)
+- **retweetReaction**: Emoji ID or Unicode emoji to react with on original messages when retweet is detected
 - **channels**: Object mapping channel IDs to monitor, with their webhook sender IDs
+  - **sender**: Webhook user ID to filter messages (set to `null` to handle all messages in the channel)
 
 ## Usage
 

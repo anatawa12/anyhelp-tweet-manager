@@ -63,7 +63,7 @@ async function handleMessage(message: Message): Promise<void> {
 		const originalMessage = await message.channel.messages.fetch(message.reference.messageId);
 
 		// Check if original message is from the configured sender
-		if (originalMessage.author.id !== channelConfig.sender) return;
+		if (channelConfig.sender !== null && originalMessage.author.id !== channelConfig.sender) return;
 
 		// Extract tweet URL from original message
 		const tweetUrl = extractTweetUrl(originalMessage.content);
@@ -87,8 +87,8 @@ async function handleMessage(message: Message): Promise<void> {
 		const retweetStatus = detectRetweet(embed.toJSON());
 
 		if (retweetStatus === "retweet") {
-			// React with emoji 1467831704046670080 on original tweet
-			await originalMessage.react("1467831704046670080");
+			// React with configured emoji on original tweet
+			await originalMessage.react(config.retweetReaction);
 			// React with ❌ on VXT reply
 			await messageWithEmbed.react("❌");
 		} else if (retweetStatus === "unknown") {

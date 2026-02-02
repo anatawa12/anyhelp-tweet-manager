@@ -7,12 +7,12 @@
 		"indentStyle": "tab",
 		"lineEnding": "lf",
 		"lineWidth": 120,
-		"includes": ["**", "!**/dist"]
+		"includes": ["src/**"]
 	},
 	"linter": {
 		"enabled": true,
 		"rules": { "recommended": false },
-		"includes": ["**", "**/dist/*"]
+		"includes": ["src/**"]
 	},
 	"assist": {
 		"enabled": true,

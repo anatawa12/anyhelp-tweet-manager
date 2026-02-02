@@ -1,5 +1,20 @@
 import process from "node:process";
-import { Client, GatewayIntentBits, Partials } from "discord.js";
+import {
+	ChannelType,
+	Client,
+	GatewayIntentBits,
+	type Message,
+	type MessageReaction,
+	type PartialMessageReaction,
+	Partials,
+	type PartialUser,
+	type User,
+} from "discord.js";
+import { loadConfig } from "./config.js";
+import { detectRetweet, extractTweetId, extractTweetUrl, getEmbedAuthorName, waitForEmbed } from './utils.js';
+
+// Load configuration
+const config = await loadConfig();
 
 // Initialize the client
 const client = new Client({
@@ -12,32 +27,185 @@ const client = new Client({
 	partials: [Partials.Message, Partials.Reaction],
 });
 
-// Login to the client
-await client.login(process.env.DISCORD_TOKEN);
+/**
+ * Sends error message to configured error channel
+ */
+async function reportError(message: string, link?: string): Promise<void> {
+	if (!config.errorChannel) return;
 
-//const guild = await client.guilds.fetch("966897185297944629");
-// 1166233915409825875/1467738450311647326
+	try {
+		const errorChannel = await client.channels.fetch(config.errorChannel);
+		if (!errorChannel || !errorChannel.isTextBased() || errorChannel.isDMBased()) return;
 
-const chan = await client.channels.fetch("1166233915409825875");
-
-if (!chan || !chan.isTextBased()) {
-	console.error("Channel not found or is not text-based");
-	process.exit(1);
+		const errorMsg = link ? `${message}\n${link}` : message;
+		await errorChannel.send(errorMsg);
+	} catch (error) {
+		console.error("Failed to send error report:", error);
+	}
 }
 
-const msg = await chan.messages.fetch({ message: "1467738450311647326", force: true });
+/**
+ * Handles new messages to detect and process VXT replies
+ */
+async function handleMessage(message: Message): Promise<void> {
+	// Check if message is in a monitored channel
+	const channelConfig = config.channels[message.channelId];
+	if (!channelConfig) return;
 
-console.log(msg);
-console.log(JSON.stringify(msg));
+	// Check if message is from VXT bot
+	if (message.author.id !== config.vxtBot) return;
 
-client.on("messageCreate", (message) => {
-	console.log(`Message received:`, JSON.stringify(message, null, 2));
+	// Check if this is a reply
+	if (!message.reference || !message.reference.messageId) return;
+
+	try {
+		// Get the original message
+		const originalMessage = await message.channel.messages.fetch(message.reference.messageId);
+
+		// Check if original message is from the configured sender
+		if (channelConfig.sender !== null && originalMessage.author.id !== channelConfig.sender) return;
+
+		// Extract tweet URL from original message
+		const tweetUrl = extractTweetUrl(originalMessage.content);
+		if (!tweetUrl) {
+			console.log(`No tweet URL found in original message: ${originalMessage.url}`);
+			return;
+		}
+
+		// Wait for embed to be available on VXT reply
+		const messageWithEmbed = await waitForEmbed(message);
+
+		if (!messageWithEmbed || messageWithEmbed.embeds.length === 0) {
+			console.log(`No embed found after waiting: ${message.url}`);
+			return;
+		}
+
+		// Get the first embed
+		const embed = messageWithEmbed.embeds[0];
+
+		// Detect if it's a retweet
+		const retweetStatus = detectRetweet(tweetUrl, embed);
+
+		if (retweetStatus === "retweet") {
+			console.log(`Retweet detected: ${message.url}`);
+			// React with configured emoji on original tweet
+			await originalMessage.react(config.retweetReaction);
+			// React with ❌ on VXT reply
+			await messageWithEmbed.react("❌");
+		} else if (retweetStatus === "unknown") {
+			console.log(`Unknown tweet type, reporting for manual check: ${message.url}`);
+			// Report error for manual check
+			const vxtMessageLink = `https://discord.com/channels/${message.guildId}/${message.channelId}/${message.id}`;
+			await reportError("Cannot determine if tweet is retweet or not. Manual check required.", vxtMessageLink);
+		} else {
+			console.log(`Original tweet detected, no action taken: ${message.url}`);
+			// If it's original, do nothing
+		}
+	} catch (error) {
+		console.error("Error handling message:", error);
+		await reportError(`Error processing message: ${error instanceof Error ? error.message : String(error)}`);
+	}
+}
+
+/**
+ * Handles reactions to create threads
+ */
+async function handleReaction(
+	reaction: MessageReaction | PartialMessageReaction,
+	user: User | PartialUser,
+): Promise<void> {
+	// Ignore bot reactions
+	if (user.bot) return;
+
+	// Check if reaction is 👀
+	if (reaction.emoji.name !== "👀") return;
+
+	// Fetch full reaction and message if partial
+	if (reaction.partial) {
+		try {
+			reaction = await reaction.fetch();
+		} catch (error) {
+			console.error("Error fetching reaction:", error);
+			return;
+		}
+	}
+
+	const message = reaction.message;
+
+	// Fetch full message if partial
+	let fullMessage: Message;
+	if (message.partial) {
+		try {
+			fullMessage = await message.fetch();
+		} catch (error) {
+			console.error("Error fetching message:", error);
+			return;
+		}
+	} else {
+		fullMessage = message;
+	}
+
+	// Check if message is in a monitored channel
+	const channelConfig = config.channels[fullMessage.channelId];
+	if (!channelConfig) return;
+
+	// Check if message is from VXT bot
+	if (fullMessage.author.id !== config.vxtBot) return;
+
+	try {
+		// Wait for embed if not available
+		let messageWithEmbed = fullMessage;
+		if (fullMessage.embeds.length === 0) {
+			const fetched = await waitForEmbed(fullMessage);
+			if (!fetched) {
+				console.log("No embed found for thread creation");
+				return;
+			}
+			messageWithEmbed = fetched;
+		}
+
+		// Get embed
+		if (messageWithEmbed.embeds.length === 0) return;
+		const embed = messageWithEmbed.embeds[0];
+
+		// Get author name from embed
+		const authorName = getEmbedAuthorName(embed);
+		if (!authorName) {
+			console.log("No author name found in embed");
+			return;
+		}
+
+		const tweetId = extractTweetId(fullMessage.content);
+
+		// Create thread with author name
+		if (fullMessage.channel.type !== ChannelType.GuildText) {
+			console.log("Cannot create thread in non-text channel");
+			return;
+		}
+
+		const thread = await fullMessage.startThread({
+			name: authorName,
+			autoArchiveDuration: 60,
+		});
+
+		// Send initial message with VXT tweet link
+		await thread.send(`https://fxtwitter.com/i/status/${tweetId}`);
+
+		// Mention the user to invite them
+		await thread.send(`<@${user.id}>`);
+	} catch (error) {
+		console.error("Error creating thread:", error);
+		await reportError(`Error creating thread: ${error instanceof Error ? error.message : String(error)}`);
+	}
+}
+
+// Set up event handlers
+client.on("messageCreate", handleMessage);
+client.on("messageReactionAdd", handleReaction);
+
+client.on("ready", () => {
+	console.log(`Logged in as ${client.user?.tag}`);
 });
 
-client.on("messageUpdate", (message) => {
-	console.log(`Message updated:`, JSON.stringify(message, null, 2));
-});
-
-client.on("messageReactionAdd", (message, user) => {
-	console.log(`Message Reaction Added:`, JSON.stringify(message, null, 2), user);
-});
+// Login to the client
+await client.login(process.env.DISCORD_TOKEN);

@@ -99,6 +99,9 @@ npm run build
 # Run the bot
 npm start
 
+# Process RT detection for existing messages
+npm run process-rt -- -c <channelId> -n <count>
+
 # Lint code
 npm run lint
 
@@ -117,6 +120,30 @@ npm run format
    ```bash
    npm start
    ```
+
+### Processing Existing Messages
+
+The bot includes a CLI command to retroactively process RT detection for existing messages:
+
+```bash
+npm run process-rt -- -c <channelId> -n <count>
+```
+
+**Options:**
+- `-c, --channel <channelId>`: The Discord channel ID to process (must be in your `settings.json` configuration)
+- `-n, --count <number>`: Number of recent messages to process
+
+**Example:**
+```bash
+# Process the last 50 messages in channel 1235990408207536151
+npm run process-rt -- -c 1235990408207536151 -n 50
+```
+
+**Notes:**
+- The channel must be configured in your `settings.json` file
+- Only VXT bot reply messages will be processed
+- The bot will apply the same RT detection logic as real-time processing
+- Retweets will be marked with reactions automatically
 
 ## How It Works
 

@@ -68,7 +68,7 @@ async function handleMessage(message: Message): Promise<void> {
 		// Extract tweet URL from original message
 		const tweetUrl = extractTweetUrl(originalMessage.content);
 		if (!tweetUrl) {
-			console.log("No tweet URL found in original message");
+			console.log(`No tweet URL found in original message: ${originalMessage.url}`);
 			return;
 		}
 
@@ -76,7 +76,7 @@ async function handleMessage(message: Message): Promise<void> {
 		const messageWithEmbed = await waitForEmbed(message);
 
 		if (!messageWithEmbed || messageWithEmbed.embeds.length === 0) {
-			console.log("No embed found after waiting");
+			console.log(`No embed found after waiting: ${message.url}`);
 			return;
 		}
 
@@ -87,16 +87,20 @@ async function handleMessage(message: Message): Promise<void> {
 		const retweetStatus = detectRetweet(embed.toJSON());
 
 		if (retweetStatus === "retweet") {
+			console.log(`Retweet detected: ${message.url}`);
 			// React with configured emoji on original tweet
 			await originalMessage.react(config.retweetReaction);
 			// React with ❌ on VXT reply
 			await messageWithEmbed.react("❌");
 		} else if (retweetStatus === "unknown") {
+			console.log(`Unknown tweet type, reporting for manual check: ${message.url}`);
 			// Report error for manual check
 			const vxtMessageLink = `https://discord.com/channels/${message.guildId}/${message.channelId}/${message.id}`;
 			await reportError("Cannot determine if tweet is retweet or not. Manual check required.", vxtMessageLink);
+		} else {
+			console.log(`Original tweet detected, no action taken: ${message.url}`);
+			// If it's original, do nothing
 		}
-		// If it's original, do nothing
 	} catch (error) {
 		console.error("Error handling message:", error);
 		await reportError(`Error processing message: ${error instanceof Error ? error.message : String(error)}`);

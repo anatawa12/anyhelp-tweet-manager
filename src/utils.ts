@@ -56,10 +56,17 @@ export function detectRetweet(embed: APIEmbed): "retweet" | "original" | "unknow
  * @returns Message with embed or null if not found
  */
 export async function waitForEmbed(message: Message): Promise<Message | null> {
+	await new Promise((resolve) => setTimeout(resolve, 1000));
+	let fetchedMessage = await message.channel.messages.fetch(message.id);
+
+	if (fetchedMessage.embeds.length > 0) {
+		return fetchedMessage;
+	}
+
 	// Wait 5 seconds and fetch
 	await new Promise((resolve) => setTimeout(resolve, 5000));
 
-	let fetchedMessage = await message.channel.messages.fetch(message.id);
+	fetchedMessage = await message.channel.messages.fetch(message.id);
 
 	if (fetchedMessage.embeds.length > 0) {
 		return fetchedMessage;

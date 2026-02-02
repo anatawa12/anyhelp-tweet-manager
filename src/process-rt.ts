@@ -1,6 +1,6 @@
 import process from "node:process";
 import { Command } from "commander";
-import { Client, GatewayIntentBits, Partials } from "discord.js";
+import { Client, GatewayIntentBits, type Message, Partials } from "discord.js";
 import { loadConfig } from "./config.js";
 import { processVxtMessage } from "./handlers.js";
 
@@ -59,7 +59,7 @@ async function main() {
 
 		// Fetch messages with pagination support
 		console.log(`Fetching up to ${options.count} messages...`);
-		const allMessages = new Map<string, any>();
+		const allMessages = new Map<string, Message>();
 		let remaining = options.count;
 		let lastMessageId: string | undefined = undefined;
 

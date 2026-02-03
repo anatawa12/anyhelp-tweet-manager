@@ -8,10 +8,9 @@ ARG TARGETARCH
 ARG TINI_VERSION=v0.19.0
 
 # Download tini in builder stage
-# Note: Using --insecure due to potential SSL interception in build environments
 RUN apt-get update && \
     apt-get install -y curl && \
-    curl --insecure -fsSL "https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-${TARGETARCH}" -o /tini && \
+    curl -fsSL "https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-${TARGETARCH}" -o /tini && \
     chmod +x /tini && \
     rm -rf /var/lib/apt/lists/*
 

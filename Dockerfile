@@ -8,10 +8,10 @@ ARG TARGETARCH
 ARG TINI_VERSION=v0.19.0
 
 # Download tini in builder stage
-RUN apt-get update && apt-get install -y --no-install-recommends curl && \
-    curl -fsSL "https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-${TARGETARCH}" -o /tini && \
+RUN apt-get update && apt-get install -y --no-install-recommends wget && \
+    wget -O /tini "https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-${TARGETARCH}" && \
     chmod +x /tini && \
-    apt-get purge -y --auto-remove curl && \
+    apt-get purge -y --auto-remove wget && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

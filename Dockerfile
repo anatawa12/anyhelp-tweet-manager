@@ -9,20 +9,7 @@ ARG TINI_VERSION=v0.19.0
 
 # Download tini in builder stage
 RUN apt-get update && apt-get install -y --no-install-recommends curl && \
-    # Determine the correct tini binary based on architecture
-    case "${TARGETARCH}" in \
-        amd64) \
-            TINI_ARCH="amd64"; \
-            ;; \
-        arm64) \
-            TINI_ARCH="arm64"; \
-            ;; \
-        *) \
-            echo "Unsupported architecture: ${TARGETARCH}"; \
-            exit 1; \
-            ;; \
-    esac && \
-    curl -fsSL "https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-${TINI_ARCH}" -o /tini && \
+    curl -fsSL "https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-${TARGETARCH}" -o /tini && \
     chmod +x /tini && \
     apt-get purge -y --auto-remove curl && \
     rm -rf /var/lib/apt/lists/*

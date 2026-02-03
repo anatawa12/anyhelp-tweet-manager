@@ -1,6 +1,18 @@
 # Build stage
 FROM node:22-slim AS builder
 
+# Tini version and checksum
+ARG TINI_VERSION=v0.19.0
+ARG TINI_SHA256=93dcc18adc78c65a028a84799ecf8ad40c936fdfc5f2a57b1acda5a8117fa82c
+
+# Download and verify tini in builder stage
+RUN apt-get update && apt-get install -y --no-install-recommends curl && \
+    curl -fsSL https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini -o /tini && \
+    echo "${TINI_SHA256}  /tini" | sha256sum -c - && \
+    chmod +x /tini && \
+    apt-get purge -y --auto-remove curl && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy package files
@@ -19,6 +31,9 @@ RUN npm run build
 # Runtime stage
 FROM node:22-slim
 
+# Copy tini from builder stage
+COPY --from=builder /tini /usr/bin/tini
+
 WORKDIR /app
 
 # Copy package files
@@ -34,5 +49,5 @@ COPY --from=builder /app/dist ./dist
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-# Set entrypoint
-ENTRYPOINT ["/docker-entrypoint.sh"]
+# Set tini as entrypoint to handle signals properly
+ENTRYPOINT ["/usr/bin/tini", "--", "/docker-entrypoint.sh"]

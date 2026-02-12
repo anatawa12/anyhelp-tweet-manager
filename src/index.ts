@@ -121,7 +121,6 @@ async function handleReaction(
 
 		const thread = await fullMessage.startThread({
 			name: authorName,
-			autoArchiveDuration: 60,
 		});
 
 		// Send initial message with VXT tweet link

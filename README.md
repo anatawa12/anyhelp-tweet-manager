@@ -19,9 +19,38 @@ The bot automatically detects if a tweet posted by IFTTT is a retweet by analyzi
 
 When users react to VXT messages with 👀 emoji:
 
-1. Creates a new thread named after the tweet author (from embed)
+1. Creates a new thread with status emoji prefix (🔍 found)
 2. Sends the VXT message link as the first message
 3. Mentions the user who reacted to invite them to the thread
+4. Adds status control buttons for managing the thread lifecycle
+
+### 3. Thread Status Management
+
+Threads created by the bot include status management for bug report tracking:
+
+- **Status emojis:** Each thread name is prefixed with an emoji indicating its current status
+  - 🔍 **found** - Initial status for newly created threads
+  - ❓ **asked** - Clarification requested from reporter
+  - 🛠️ **investigating** - Issue is being investigated
+  - 📦 **unreleased** - Fix has been implemented but not released
+  - ✅ **fixed** - Fix has been released
+  - 🔒 **closed** - Thread is closed
+
+- **Status transitions:** Available transitions are shown as buttons at the bottom of each thread
+  - Normal flow: found → asked ↔ investigating → unreleased → fixed → closed
+  - Regression handling: unreleased or fixed can transition back to asked/investigating if fix fails
+
+- **Status controls:** Each thread contains interactive buttons that update the thread status and name automatically
+
+### 4. Manual Thread Creation
+
+Create threads manually using the `/create-thread` slash command:
+
+- **Command:** `/create-thread name:<thread-name>`
+- **Usage:** Can be used for bug reports submitted through non-tweet channels
+- Threads are created with the initial "found" status
+- User is automatically invited to the thread
+- Status control buttons are added automatically
 
 ## Setup
 
@@ -32,7 +61,9 @@ When users react to VXT messages with 👀 emoji:
   - Read Messages/View Channels
   - Send Messages
   - Create Public Threads
+  - Manage Threads (for renaming threads)
   - Add Reactions
+  - Use Slash Commands
   - Message Content Intent (required)
 
 ### Installation

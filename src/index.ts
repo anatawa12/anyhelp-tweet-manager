@@ -86,6 +86,18 @@ async function ensureStatusButtonsAtBottom(thread: ThreadChannel, currentStatus:
 			await oldMessage.delete();
 		} catch (error) {
 			console.error("Error deleting old status button message:", error);
+			// If not found, try to find it in recent messages (for restart resilience)
+			try {
+				const recentMessages = await thread.messages.fetch({ limit: 20 });
+				const buttonMessage = recentMessages.find(
+					(msg: Message) => msg.author.id === thread.client.user?.id && msg.content === STATUS_BUTTON_CONTENT,
+				);
+				if (buttonMessage) {
+					await buttonMessage.delete();
+				}
+			} catch (fetchError) {
+				console.error("Error fetching recent messages to find button:", fetchError);
+			}
 		}
 	}
 
@@ -294,8 +306,8 @@ async function handleButtonInteraction(interaction: MessageComponentInteraction)
 		// Acknowledge the interaction immediately
 		await interaction.deferUpdate();
 
-		// Send a message about the status change
-		await channel.send(`Status updated to ${STATUS_LABELS[newStatus]}`);
+		// Log the status change
+		console.log(`Thread ${channel.id} status updated to ${STATUS_LABELS[newStatus]}`);
 
 		// Recreate status buttons at the bottom (this will delete old ones)
 		await ensureStatusButtonsAtBottom(channel, newStatus);

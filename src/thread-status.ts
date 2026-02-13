@@ -2,11 +2,12 @@
  * Thread status management for bug report tracking
  */
 
-export type ThreadStatus = "found" | "asked" | "investigating" | "unreleased" | "fixed" | "closed";
+export type ThreadStatus = "found" | "asked" | "waiting" | "investigating" | "unreleased" | "fixed" | "closed";
 
 export const STATUS_EMOJIS: Record<ThreadStatus, string> = {
 	found: "🔍",
 	asked: "❓",
+	waiting: "🔄",
 	investigating: "🛠️",
 	unreleased: "📦",
 	fixed: "✅",
@@ -16,6 +17,7 @@ export const STATUS_EMOJIS: Record<ThreadStatus, string> = {
 export const STATUS_LABELS: Record<ThreadStatus, string> = {
 	found: "Found",
 	asked: "Asked",
+	waiting: "Waiting",
 	investigating: "Investigating",
 	unreleased: "Unreleased",
 	fixed: "Fixed",
@@ -28,10 +30,11 @@ export const STATUS_LABELS: Record<ThreadStatus, string> = {
  */
 export const STATUS_TRANSITIONS: Record<ThreadStatus, ThreadStatus[]> = {
 	found: ["asked"],
-	asked: ["investigating", "closed"],
-	investigating: ["asked", "unreleased", "closed"],
-	unreleased: ["asked", "investigating", "fixed"],
-	fixed: ["asked", "investigating", "closed"],
+	asked: ["waiting", "investigating", "closed"],
+	waiting: ["asked", "investigating", "unreleased", "fixed"],
+	investigating: ["asked", "waiting", "unreleased", "closed"],
+	unreleased: ["asked", "waiting", "investigating", "fixed"],
+	fixed: ["asked", "waiting", "investigating", "closed"],
 	closed: [],
 };
 

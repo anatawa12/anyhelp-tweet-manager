@@ -31,14 +31,16 @@ Threads created by the bot include status management for bug report tracking:
 - **Status emojis:** Each thread name is prefixed with an emoji indicating its current status
   - 🔍 **found** - Initial status for newly created threads
   - ❓ **asked** - Clarification requested from reporter
+  - 🔄 **waiting** - Waiting for fix on the other party's tool side
   - 🛠️ **investigating** - Issue is being investigated
   - 📦 **unreleased** - Fix has been implemented but not released
   - ✅ **fixed** - Fix has been released
   - 🔒 **closed** - Thread is closed
 
 - **Status transitions:** Available transitions are shown as buttons at the bottom of each thread
-  - Normal flow: found → asked ↔ investigating → unreleased → fixed → closed
-  - Regression handling: unreleased or fixed can transition back to asked/investigating if fix fails
+  - Normal flow: found → asked ↔ waiting ↔ investigating → unreleased → fixed → closed
+  - Regression handling: unreleased or fixed can transition back to asked/waiting/investigating if fix fails
+  - The waiting status can also transition directly to unreleased or fixed
 
 - **Status controls:** Each thread contains interactive buttons that update the thread status and name automatically
 

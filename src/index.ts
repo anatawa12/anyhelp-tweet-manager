@@ -347,11 +347,24 @@ client.on("clientReady", async () => {
 			),
 	];
 
-	const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN || "");
+	const discordToken = process.env.DISCORD_TOKEN;
+	const applicationId = process.env.APPLICATION_ID;
+
+	if (!discordToken) {
+		console.error("DISCORD_TOKEN environment variable is not set");
+		return;
+	}
+
+	if (!applicationId) {
+		console.error("APPLICATION_ID environment variable is not set");
+		return;
+	}
+
+	const rest = new REST({ version: "10" }).setToken(discordToken);
 
 	try {
 		console.log("Registering slash commands...");
-		await rest.put(Routes.applicationGuildCommands(process.env.APPLICATION_ID || "", config.guild), {
+		await rest.put(Routes.applicationGuildCommands(applicationId, config.guild), {
 			body: commands,
 		});
 		console.log("Slash commands registered successfully");

@@ -16,7 +16,6 @@
 	},
 	"assist": {
 		"enabled": true,
-		"actions": { "source": { "organizeImports": "on" } },
-		"includes": ["src/**"]
+		"actions": { "source": { "organizeImports": "on" } }
 	}
 }

@@ -32,6 +32,9 @@ import {
 } from "./thread-status.js";
 import { extractTweetId, getEmbedAuthorName, waitForEmbed } from "./utils.js";
 
+// Constants
+const DISCORD_API_VERSION = "10";
+
 // Load configuration
 const config = await loadConfig();
 
@@ -360,7 +363,7 @@ client.on("clientReady", async () => {
 		return;
 	}
 
-	const rest = new REST({ version: "10" }).setToken(discordToken);
+	const rest = new REST({ version: DISCORD_API_VERSION }).setToken(discordToken);
 
 	try {
 		console.log("Registering slash commands...");

@@ -17,6 +17,7 @@ import {
 	REST,
 	Routes,
 	SlashCommandBuilder,
+	type ThreadChannel,
 	type User,
 } from "discord.js";
 import { loadConfig } from "./config.js";
@@ -76,10 +77,7 @@ function createStatusButtons(currentStatus: ThreadStatus): ActionRowBuilder<Butt
  * Creates or updates status buttons at the bottom of a thread
  * Deletes old button message if it exists and creates a new one
  */
-async function ensureStatusButtonsAtBottom(
-	thread: { id: string; send: (options: any) => Promise<Message>; messages: any },
-	currentStatus: ThreadStatus,
-): Promise<void> {
+async function ensureStatusButtonsAtBottom(thread: ThreadChannel, currentStatus: ThreadStatus): Promise<void> {
 	// Delete old button message if it exists
 	const oldMessageId = threadStatusMessages.get(thread.id);
 	if (oldMessageId) {
@@ -107,11 +105,11 @@ async function ensureStatusButtonsAtBottom(
  * Also handles messages in threads to keep buttons at the bottom
  */
 async function handleMessage(message: Message): Promise<void> {
+	// Skip if this message is from the bot itself
+	if (message.author.id === client.user?.id) return;
+
 	// Handle messages in threads - move buttons to bottom
 	if (message.channel.isThread()) {
-		// Skip if this message is from the bot itself
-		if (message.author.id === client.user?.id) return;
-
 		const currentStatus = extractStatusFromName(message.channel.name);
 
 		// Only handle threads with status tracking

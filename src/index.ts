@@ -34,9 +34,13 @@ import { extractTweetId, getEmbedAuthorName, waitForEmbed } from "./utils.js";
 
 // Constants
 const DISCORD_API_VERSION = "10";
+const STATUS_BUTTON_CONTENT = "Thread status controls:";
 
 // Load configuration
 const config = await loadConfig();
+
+// Track status button messages for each thread
+const threadStatusMessages = new Map<string, string>(); // threadId -> messageId
 
 // Initialize the client
 const client = new Client({
@@ -69,9 +73,55 @@ function createStatusButtons(currentStatus: ThreadStatus): ActionRowBuilder<Butt
 }
 
 /**
+ * Creates or updates status buttons at the bottom of a thread
+ * Deletes old button message if it exists and creates a new one
+ */
+async function ensureStatusButtonsAtBottom(
+	thread: { id: string; send: (options: any) => Promise<Message>; messages: any },
+	currentStatus: ThreadStatus,
+): Promise<void> {
+	// Delete old button message if it exists
+	const oldMessageId = threadStatusMessages.get(thread.id);
+	if (oldMessageId) {
+		try {
+			const oldMessage = await thread.messages.fetch(oldMessageId);
+			await oldMessage.delete();
+		} catch (error) {
+			console.error("Error deleting old status button message:", error);
+		}
+	}
+
+	// Create new button message at the bottom
+	const buttons = createStatusButtons(currentStatus);
+	const message = await thread.send({
+		content: STATUS_BUTTON_CONTENT,
+		components: buttons.components.length > 0 ? [buttons] : [],
+	});
+
+	// Track the new message
+	threadStatusMessages.set(thread.id, message.id);
+}
+
+/**
  * Handles new messages to detect and process VXT replies
+ * Also handles messages in threads to keep buttons at the bottom
  */
 async function handleMessage(message: Message): Promise<void> {
+	// Handle messages in threads - move buttons to bottom
+	if (message.channel.isThread()) {
+		// Skip if this message is from the bot itself
+		if (message.author.id === client.user?.id) return;
+
+		const currentStatus = extractStatusFromName(message.channel.name);
+
+		// Only handle threads with status tracking
+		if (currentStatus) {
+			// Move status buttons to the bottom
+			await ensureStatusButtonsAtBottom(message.channel, currentStatus);
+		}
+		return;
+	}
+
 	// Check if message is in a monitored channel
 	const channelConfig = config.channels[message.channelId];
 	if (!channelConfig) return;
@@ -170,12 +220,8 @@ async function handleReaction(
 		// Mention the user to invite them
 		await thread.send(`<@${user.id}>`);
 
-		// Send status control buttons
-		const buttons = createStatusButtons(initialStatus);
-		await thread.send({
-			content: "Thread status controls:",
-			components: [buttons],
-		});
+		// Send status control buttons at the bottom
+		await ensureStatusButtonsAtBottom(thread, initialStatus);
 	} catch (error) {
 		console.error("Error creating thread:", error);
 		await reportError(
@@ -247,22 +293,22 @@ async function handleButtonInteraction(interaction: MessageComponentInteraction)
 		const newThreadName = updateThreadNameStatus(channel.name, newStatus);
 		await channel.setName(newThreadName);
 
-		// Update the status control message with new buttons
-		const buttons = createStatusButtons(newStatus);
-
-		await interaction.update({
-			content: "Thread status controls:",
-			components: buttons.components.length > 0 ? [buttons] : [],
-		});
+		// Acknowledge the interaction immediately
+		await interaction.deferUpdate();
 
 		// Send a message about the status change
 		await channel.send(`Status updated to ${STATUS_LABELS[newStatus]}`);
+
+		// Recreate status buttons at the bottom (this will delete old ones)
+		await ensureStatusButtonsAtBottom(channel, newStatus);
 	} catch (error) {
 		console.error("Error handling button interaction:", error);
-		await interaction.reply({
-			content: "An error occurred while updating the status.",
-			ephemeral: true,
-		});
+		if (!interaction.replied && !interaction.deferred) {
+			await interaction.reply({
+				content: "An error occurred while updating the status.",
+				ephemeral: true,
+			});
+		}
 	}
 }
 
@@ -272,6 +318,8 @@ async function handleButtonInteraction(interaction: MessageComponentInteraction)
 async function handleCommand(interaction: CommandInteraction): Promise<void> {
 	if (interaction.commandName === "create-thread") {
 		await handleCreateThreadCommand(interaction);
+	} else if (interaction.commandName === "add-status-buttons") {
+		await handleAddStatusButtonsCommand(interaction);
 	}
 }
 
@@ -312,12 +360,8 @@ async function handleCreateThreadCommand(interaction: CommandInteraction): Promi
 		// Invite the user to the thread
 		await thread.send(`<@${interaction.user.id}>`);
 
-		// Send status control buttons
-		const buttons = createStatusButtons(initialStatus);
-		await thread.send({
-			content: "Thread status controls:",
-			components: [buttons],
-		});
+		// Send status control buttons at the bottom
+		await ensureStatusButtonsAtBottom(thread, initialStatus);
 
 		await interaction.reply({
 			content: `Thread created: <#${thread.id}>`,
@@ -327,6 +371,47 @@ async function handleCreateThreadCommand(interaction: CommandInteraction): Promi
 		console.error("Error creating thread via command:", error);
 		await interaction.reply({
 			content: "An error occurred while creating the thread.",
+			ephemeral: true,
+		});
+	}
+}
+
+/**
+ * Handles the /add-status-buttons command
+ */
+async function handleAddStatusButtonsCommand(interaction: CommandInteraction): Promise<void> {
+	try {
+		// Check if in a thread
+		const channel = interaction.channel;
+		if (!channel || !channel.isThread()) {
+			await interaction.reply({
+				content: "This command can only be used in threads.",
+				ephemeral: true,
+			});
+			return;
+		}
+
+		// Get current status from thread name
+		const currentStatus = extractStatusFromName(channel.name);
+		if (!currentStatus) {
+			await interaction.reply({
+				content: "Could not determine thread status. Please ensure the thread name has a status emoji prefix.",
+				ephemeral: true,
+			});
+			return;
+		}
+
+		// Create status buttons at the bottom
+		await ensureStatusButtonsAtBottom(channel, currentStatus);
+
+		await interaction.reply({
+			content: "Status buttons added successfully!",
+			ephemeral: true,
+		});
+	} catch (error) {
+		console.error("Error adding status buttons:", error);
+		await interaction.reply({
+			content: "An error occurred while adding status buttons.",
 			ephemeral: true,
 		});
 	}
@@ -348,6 +433,9 @@ client.on("clientReady", async () => {
 			.addStringOption((option) =>
 				option.setName("name").setDescription("The name for the thread (without emoji)").setRequired(true),
 			),
+		new SlashCommandBuilder()
+			.setName("add-status-buttons")
+			.setDescription("Add status control buttons to an existing thread"),
 	];
 
 	const discordToken = process.env.DISCORD_TOKEN;

@@ -43,6 +43,9 @@ Threads created by the bot include status management for bug report tracking:
   - The waiting status can also transition directly to unreleased or fixed
 
 - **Status controls:** Each thread contains interactive buttons that update the thread status and name automatically
+  - Buttons are always kept at the bottom of the thread
+  - When new messages are posted, the bot automatically moves buttons to the bottom
+  - When status changes, old buttons are deleted and new ones are created
 
 ### 4. Manual Thread Creation
 
@@ -53,6 +56,16 @@ Create threads manually using the `/create-thread` slash command:
 - Threads are created with the initial "found" status
 - User is automatically invited to the thread
 - Status control buttons are added automatically
+
+### 5. Adding Status Buttons to Existing Threads
+
+Add status control buttons to existing threads using the `/add-status-buttons` command:
+
+- **Command:** `/add-status-buttons`
+- **Usage:** Run this command inside any existing thread to add status control buttons
+- The command detects the current status from the thread name emoji
+- Useful for threads created before the status management feature was added
+- Can be run in any thread with a status emoji prefix
 
 ## Setup
 

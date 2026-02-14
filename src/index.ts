@@ -10,6 +10,7 @@ import {
 	type Interaction,
 	type Message,
 	type MessageComponentInteraction,
+	MessageFlags,
 	type MessageReaction,
 	type PartialMessageReaction,
 	Partials,
@@ -275,7 +276,7 @@ async function handleButtonInteraction(interaction: MessageComponentInteraction)
 		if (!channel || !channel.isThread()) {
 			await interaction.reply({
 				content: "This command can only be used in threads.",
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 			return;
 		}
@@ -285,7 +286,7 @@ async function handleButtonInteraction(interaction: MessageComponentInteraction)
 		if (!currentStatus) {
 			await interaction.reply({
 				content: "Could not determine current thread status.",
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 			return;
 		}
@@ -294,7 +295,7 @@ async function handleButtonInteraction(interaction: MessageComponentInteraction)
 		if (!isValidTransition(currentStatus, newStatus)) {
 			await interaction.reply({
 				content: `Invalid status transition from ${currentStatus} to ${newStatus}.`,
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 			return;
 		}
@@ -316,7 +317,7 @@ async function handleButtonInteraction(interaction: MessageComponentInteraction)
 		if (!interaction.replied && !interaction.deferred) {
 			await interaction.reply({
 				content: "An error occurred while updating the status.",
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 	}
@@ -347,7 +348,7 @@ async function handleCreateThreadCommand(interaction: CommandInteraction): Promi
 		if (!channelConfig) {
 			await interaction.reply({
 				content: "This command can only be used in monitored channels.",
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 			return;
 		}
@@ -355,7 +356,7 @@ async function handleCreateThreadCommand(interaction: CommandInteraction): Promi
 		if (!interaction.channel || interaction.channel.type !== ChannelType.GuildText) {
 			await interaction.reply({
 				content: "This command can only be used in text channels.",
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 			return;
 		}
@@ -375,13 +376,13 @@ async function handleCreateThreadCommand(interaction: CommandInteraction): Promi
 
 		await interaction.reply({
 			content: `Thread created: <#${thread.id}>`,
-			ephemeral: true,
+			flags: MessageFlags.Ephemeral,
 		});
 	} catch (error) {
 		console.error("Error creating thread via command:", error);
 		await interaction.reply({
 			content: "An error occurred while creating the thread.",
-			ephemeral: true,
+			flags: MessageFlags.Ephemeral,
 		});
 	}
 }
@@ -396,7 +397,7 @@ async function handleAddStatusButtonsCommand(interaction: CommandInteraction): P
 		if (!channel || !channel.isThread()) {
 			await interaction.reply({
 				content: "This command can only be used in threads.",
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 			return;
 		}
@@ -406,7 +407,7 @@ async function handleAddStatusButtonsCommand(interaction: CommandInteraction): P
 		if (!currentStatus) {
 			await interaction.reply({
 				content: "Could not determine thread status. Please ensure the thread name has a status emoji prefix.",
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 			return;
 		}
@@ -416,13 +417,13 @@ async function handleAddStatusButtonsCommand(interaction: CommandInteraction): P
 
 		await interaction.reply({
 			content: "Status buttons added successfully!",
-			ephemeral: true,
+			flags: MessageFlags.Ephemeral,
 		});
 	} catch (error) {
 		console.error("Error adding status buttons:", error);
 		await interaction.reply({
 			content: "An error occurred while adding status buttons.",
-			ephemeral: true,
+			flags: MessageFlags.Ephemeral,
 		});
 	}
 }

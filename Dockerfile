@@ -1,9 +1,12 @@
+# Get platform arguments from Docker buildx (global scope for FROM)
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
+ARG TARGETARCH
+
 # Build stage - use BUILDPLATFORM to run build natively on host architecture
 FROM --platform=$BUILDPLATFORM node:22-slim AS builder
 
-# Get both build and target architectures from Docker buildx
-ARG BUILDPLATFORM
-ARG TARGETPLATFORM
+# Re-declare args for use in this stage
 ARG TARGETARCH
 
 # Tini version

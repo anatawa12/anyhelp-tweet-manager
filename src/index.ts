@@ -87,18 +87,20 @@ async function ensureStatusButtonsAtBottom(thread: ThreadChannel, currentStatus:
 			await oldMessage.delete();
 		} catch (error) {
 			console.error("Error deleting old status button message:", error);
-			// If not found, try to find it in recent messages (for restart resilience)
-			try {
-				const recentMessages = await thread.messages.fetch({ limit: 20 });
-				const buttonMessage = recentMessages.find(
-					(msg: Message) => msg.author.id === thread.client.user?.id && msg.content === STATUS_BUTTON_CONTENT,
-				);
-				if (buttonMessage) {
-					await buttonMessage.delete();
-				}
-			} catch (fetchError) {
-				console.error("Error fetching recent messages to find button:", fetchError);
+		}
+	} else {
+		// If not found, try to find it in recent messages (for restart resilience)
+		try {
+			const recentMessages = await thread.messages.fetch({ limit: 20 });
+			console.log("recentMessages", recentMessages.toJSON());
+			const buttonMessage = recentMessages.find(
+				(msg: Message) => msg.author.id === thread.client.user?.id && msg.content === STATUS_BUTTON_CONTENT,
+			);
+			if (buttonMessage) {
+				await buttonMessage.delete();
 			}
+		} catch (fetchError) {
+			console.error("Error fetching recent messages to find button:", fetchError);
 		}
 	}
 

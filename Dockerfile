@@ -1,7 +1,9 @@
-# Build stage
-FROM node:22-slim AS builder
+# Build stage - use BUILDPLATFORM to run build natively on host architecture
+FROM --platform=$BUILDPLATFORM node:22-slim AS builder
 
-# Get target architecture from Docker buildx
+# Get both build and target architectures from Docker buildx
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
 ARG TARGETARCH
 
 # Tini version

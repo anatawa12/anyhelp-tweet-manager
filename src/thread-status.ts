@@ -29,7 +29,7 @@ export const STATUS_LABELS: Record<ThreadStatus, string> = {
  * Key: current status, Value: array of allowed next statuses
  */
 export const STATUS_TRANSITIONS: Record<ThreadStatus, ThreadStatus[]> = {
-	found: ["asked"],
+	found: ["asked", "investigating"],
 	asked: ["waiting", "investigating", "closed"],
 	waiting: ["asked", "investigating", "unreleased", "fixed"],
 	investigating: ["asked", "waiting", "unreleased", "closed"],

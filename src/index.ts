@@ -239,8 +239,8 @@ async function handleReaction(
 
 			thread = await threadChannel.threads.create({
 				name: formatThreadName(authorName, initialStatus),
-				startMessage: fullMessage.url,
 			});
+			await thread.send(fullMessage.url);
 		}
 
 		// Send initial message with VXT tweet link

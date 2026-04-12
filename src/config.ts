@@ -10,6 +10,7 @@ const ConfigSchema = z.object({
 		z.string(),
 		z.object({
 			sender: z.string().nullable(),
+			threadChannel: z.string().nullable(),
 		}),
 	),
 });

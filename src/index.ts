@@ -17,10 +17,10 @@ import {
 	type PartialUser,
 	REST,
 	Routes,
-	SlashCommandBuilder,
+	SlashCommandBuilder, TextThreadChannel,
 	type ThreadChannel,
 	type User,
-} from "discord.js";
+} from 'discord.js';
 import { loadConfig } from "./config.js";
 import { processVxtMessage, reportError } from "./handlers.js";
 import {
@@ -223,9 +223,25 @@ async function handleReaction(
 		}
 
 		const initialStatus: ThreadStatus = "found";
-		const thread = await fullMessage.startThread({
-			name: formatThreadName(authorName, initialStatus),
-		});
+		// Create thread with initial status
+		let thread: TextThreadChannel;
+		if (channelConfig.threadChannel == null) {
+			thread = await fullMessage.startThread({
+				name: formatThreadName(authorName, initialStatus),
+			});
+		} else {
+			const threadChannel = await client.channels.fetch(channelConfig.threadChannel);
+
+			if (threadChannel == null || threadChannel.type !== ChannelType.GuildText) {
+				await reportError(client, config, `Internal Error: The channel configured in settings is not valid for creating thread (${channelConfig.threadChannel} = ${message.channelId})`);
+				return;
+			}
+
+			thread = await threadChannel.threads.create({
+				name: formatThreadName(authorName, initialStatus),
+				startMessage: fullMessage.url,
+			});
+		}
 
 		// Send initial message with VXT tweet link
 		await thread.send(`https://fxtwitter.com/i/status/${tweetId}`);
@@ -346,7 +362,8 @@ async function handleCreateThreadCommand(interaction: CommandInteraction): Promi
 		const threadName = interaction.options.getString("name", true);
 
 		// Check if in a monitored channel
-		const channelConfig = config.channels[interaction.channelId];
+		const channelConfig = config.channels[interaction.channelId]
+			?? Object.values(config.channels).find((cfg) => cfg.threadChannel === interaction.channelId);
 		if (!channelConfig) {
 			await interaction.reply({
 				content: "This command can only be used in monitored channels.",
@@ -363,9 +380,16 @@ async function handleCreateThreadCommand(interaction: CommandInteraction): Promi
 			return;
 		}
 
+		const threadChannel = channelConfig.threadChannel == null ? interaction.channel : await client.channels.fetch(channelConfig.threadChannel);
+
+		if (threadChannel == null || threadChannel.type !== ChannelType.GuildText) {
+			await reportError(client, config, `Internal Error: The channel configured in settings is not valid for creating thread (${channelConfig.threadChannel} = ${interaction.channelId})`);
+			return;
+		}
+
 		// Create thread with initial status
 		const initialStatus: ThreadStatus = "found";
-		const thread = await interaction.channel.threads.create({
+		const thread = await threadChannel.threads.create({
 			name: formatThreadName(threadName, initialStatus),
 			reason: `Created by ${interaction.user.tag} via command`,
 		});

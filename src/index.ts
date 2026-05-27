@@ -20,6 +20,7 @@ import {
 	SlashCommandBuilder,
 	type TextChannel,
 	TextThreadChannel,
+	ThreadAutoArchiveDuration,
 	type ThreadChannel,
 	type User,
 } from "discord.js";
@@ -39,6 +40,7 @@ import { extractTweetId, getEmbedAuthorName, waitForEmbed } from "./utils.js";
 // Constants
 const DISCORD_API_VERSION = "10";
 const STATUS_BUTTON_CONTENT = "Thread status controls:";
+const DEFAULT_THREAD_AUTO_ARCHIVE_DURATION = ThreadAutoArchiveDuration.OneWeek;
 const THREAD_REFRESH_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const THREAD_REFRESH_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -296,6 +298,7 @@ async function handleReaction(
 		if (channelConfig.threadChannel == null) {
 			thread = await fullMessage.startThread({
 				name: formatThreadName(authorName, initialStatus),
+				autoArchiveDuration: DEFAULT_THREAD_AUTO_ARCHIVE_DURATION,
 			});
 		} else {
 			const threadChannel = await client.channels.fetch(channelConfig.threadChannel);
@@ -311,6 +314,7 @@ async function handleReaction(
 
 			thread = await threadChannel.threads.create({
 				name: formatThreadName(authorName, initialStatus),
+				autoArchiveDuration: DEFAULT_THREAD_AUTO_ARCHIVE_DURATION,
 			});
 			await thread.send(fullMessage.url);
 		}
@@ -471,6 +475,7 @@ async function handleCreateThreadCommand(interaction: CommandInteraction): Promi
 		const initialStatus: ThreadStatus = "found";
 		const thread = await threadChannel.threads.create({
 			name: formatThreadName(threadName, initialStatus),
+			autoArchiveDuration: DEFAULT_THREAD_AUTO_ARCHIVE_DURATION,
 			reason: `Created by ${interaction.user.tag} via command`,
 		});
 

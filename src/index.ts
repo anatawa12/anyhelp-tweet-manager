@@ -17,10 +17,12 @@ import {
 	type PartialUser,
 	REST,
 	Routes,
-	SlashCommandBuilder, TextThreadChannel,
+	SlashCommandBuilder,
+	type TextChannel,
+	TextThreadChannel,
 	type ThreadChannel,
 	type User,
-} from 'discord.js';
+} from "discord.js";
 import { loadConfig } from "./config.js";
 import { processVxtMessage, reportError } from "./handlers.js";
 import {
@@ -37,12 +39,11 @@ import { extractTweetId, getEmbedAuthorName, waitForEmbed } from "./utils.js";
 // Constants
 const DISCORD_API_VERSION = "10";
 const STATUS_BUTTON_CONTENT = "Thread status controls:";
+const THREAD_REFRESH_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const THREAD_REFRESH_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 // Load configuration
 const config = await loadConfig();
-
-// Track status button messages for each thread
-const threadStatusMessages = new Map<string, string>(); // threadId -> messageId
 
 // Initialize the client
 const client = new Client({
@@ -79,40 +80,107 @@ function createStatusButtons(currentStatus: ThreadStatus): ActionRowBuilder<Butt
  * Deletes old button message if it exists and creates a new one
  */
 async function ensureStatusButtonsAtBottom(thread: ThreadChannel, currentStatus: ThreadStatus): Promise<void> {
-	// Delete old button message if it exists
-	const oldMessageId = threadStatusMessages.get(thread.id);
-	if (oldMessageId) {
-		try {
-			const oldMessage = await thread.messages.fetch(oldMessageId);
-			await oldMessage.delete();
-		} catch (error) {
-			console.error("Error deleting old status button message:", error);
+	try {
+		const recentMessages = await thread.messages.fetch({ limit: 50 });
+		const buttonMessages = recentMessages.filter(
+			(msg: Message) => msg.author.id === thread.client.user?.id && msg.content === STATUS_BUTTON_CONTENT,
+		);
+		for (const buttonMessage of buttonMessages.values()) {
+			await buttonMessage.delete();
 		}
-	} else {
-		// If not found, try to find it in recent messages (for restart resilience)
-		try {
-			const recentMessages = await thread.messages.fetch({ limit: 20 });
-			console.log("recentMessages", recentMessages.toJSON());
-			const buttonMessage = recentMessages.find(
-				(msg: Message) => msg.author.id === thread.client.user?.id && msg.content === STATUS_BUTTON_CONTENT,
-			);
-			if (buttonMessage) {
-				await buttonMessage.delete();
-			}
-		} catch (fetchError) {
-			console.error("Error fetching recent messages to find button:", fetchError);
-		}
+	} catch (fetchError) {
+		console.error("Error fetching recent messages to find button:", fetchError);
 	}
 
 	// Create new button message at the bottom
 	const buttons = createStatusButtons(currentStatus);
-	const message = await thread.send({
+	await thread.send({
 		content: STATUS_BUTTON_CONTENT,
 		components: buttons.components.length > 0 ? [buttons] : [],
 	});
+}
 
-	// Track the new message
-	threadStatusMessages.set(thread.id, message.id);
+function isLockedStatusThread(thread: ThreadChannel): boolean {
+	const status = extractStatusFromName(thread.name);
+	return status === "closed" || thread.locked === true;
+}
+
+function isThreadAboutToHide(thread: ThreadChannel): boolean {
+	if (thread.archived) return true;
+	if (thread.archiveTimestamp == null || thread.autoArchiveDuration == null) return false;
+
+	const hideAt = thread.archiveTimestamp + thread.autoArchiveDuration * 60 * 1000;
+	return hideAt - Date.now() <= THREAD_REFRESH_WINDOW_MS;
+}
+
+async function refreshManagedThreadVisibility(thread: ThreadChannel): Promise<void> {
+	const currentStatus = extractStatusFromName(thread.name);
+	if (!currentStatus || isLockedStatusThread(thread) || !isThreadAboutToHide(thread)) {
+		return;
+	}
+
+	if (thread.archived) {
+		await thread.setArchived(false, "Keeping non-closed managed thread visible");
+	}
+
+	await ensureStatusButtonsAtBottom(thread, currentStatus);
+}
+
+async function fetchArchivedPublicThreads(channel: TextChannel): Promise<ThreadChannel[]> {
+	const threads: ThreadChannel[] = [];
+	let before: ThreadChannel | undefined;
+
+	while (true) {
+		const archived = await channel.threads.fetchArchived({
+			type: "public",
+			fetchAll: true,
+			before,
+			limit: 100,
+		});
+		const fetchedThreads = [...archived.threads.values()];
+		threads.push(...fetchedThreads);
+
+		if (!archived.hasMore || fetchedThreads.length === 0) {
+			return threads;
+		}
+
+		before = fetchedThreads.at(-1);
+	}
+}
+
+async function keepManagedThreadsVisible(): Promise<void> {
+	const parentChannelIds = new Set<string>();
+	for (const [channelId, channelConfig] of Object.entries(config.channels)) {
+		parentChannelIds.add(channelConfig.threadChannel ?? channelId);
+	}
+
+	for (const channelId of parentChannelIds) {
+		try {
+			const channel = await client.channels.fetch(channelId);
+			if (channel == null || channel.type !== ChannelType.GuildText) {
+				continue;
+			}
+
+			const [activeThreads, archivedThreads] = await Promise.all([
+				channel.threads.fetchActive(),
+				fetchArchivedPublicThreads(channel),
+			]);
+
+			const threads = new Map<string, ThreadChannel>();
+			for (const thread of activeThreads.threads.values()) {
+				threads.set(thread.id, thread);
+			}
+			for (const thread of archivedThreads) {
+				threads.set(thread.id, thread);
+			}
+
+			for (const thread of threads.values()) {
+				await refreshManagedThreadVisibility(thread);
+			}
+		} catch (error) {
+			console.error(`Error refreshing managed threads for channel ${channelId}:`, error);
+		}
+	}
 }
 
 /**
@@ -233,7 +301,11 @@ async function handleReaction(
 			const threadChannel = await client.channels.fetch(channelConfig.threadChannel);
 
 			if (threadChannel == null || threadChannel.type !== ChannelType.GuildText) {
-				await reportError(client, config, `Internal Error: The channel configured in settings is not valid for creating thread (${channelConfig.threadChannel} = ${message.channelId})`);
+				await reportError(
+					client,
+					config,
+					`Internal Error: The channel configured in settings is not valid for creating thread (${channelConfig.threadChannel} = ${message.channelId})`,
+				);
 				return;
 			}
 
@@ -362,8 +434,9 @@ async function handleCreateThreadCommand(interaction: CommandInteraction): Promi
 		const threadName = interaction.options.getString("name", true);
 
 		// Check if in a monitored channel
-		const channelConfig = config.channels[interaction.channelId]
-			?? Object.values(config.channels).find((cfg) => cfg.threadChannel === interaction.channelId);
+		const channelConfig =
+			config.channels[interaction.channelId] ??
+			Object.values(config.channels).find((cfg) => cfg.threadChannel === interaction.channelId);
 		if (!channelConfig) {
 			await interaction.reply({
 				content: "This command can only be used in monitored channels.",
@@ -380,10 +453,17 @@ async function handleCreateThreadCommand(interaction: CommandInteraction): Promi
 			return;
 		}
 
-		const threadChannel = channelConfig.threadChannel == null ? interaction.channel : await client.channels.fetch(channelConfig.threadChannel);
+		const threadChannel =
+			channelConfig.threadChannel == null
+				? interaction.channel
+				: await client.channels.fetch(channelConfig.threadChannel);
 
 		if (threadChannel == null || threadChannel.type !== ChannelType.GuildText) {
-			await reportError(client, config, `Internal Error: The channel configured in settings is not valid for creating thread (${channelConfig.threadChannel} = ${interaction.channelId})`);
+			await reportError(
+				client,
+				config,
+				`Internal Error: The channel configured in settings is not valid for creating thread (${channelConfig.threadChannel} = ${interaction.channelId})`,
+			);
 			return;
 		}
 
@@ -496,6 +576,10 @@ client.on("clientReady", async () => {
 			body: commands,
 		});
 		console.log("Slash commands registered successfully");
+		await keepManagedThreadsVisible();
+		setInterval(() => {
+			void keepManagedThreadsVisible();
+		}, THREAD_REFRESH_CHECK_INTERVAL_MS);
 	} catch (error) {
 		console.error("Error registering slash commands:", error);
 	}

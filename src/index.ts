@@ -18,7 +18,6 @@ import {
 	REST,
 	Routes,
 	SlashCommandBuilder,
-	type TextChannel,
 	TextThreadChannel,
 	ThreadAutoArchiveDuration,
 	type ThreadChannel,
@@ -107,47 +106,25 @@ function isLockedStatusThread(thread: ThreadChannel): boolean {
 	return status === "closed" || thread.locked === true;
 }
 
-function isThreadAboutToHide(thread: ThreadChannel): boolean {
-	if (thread.archived) return true;
-	if (thread.archiveTimestamp == null || thread.autoArchiveDuration == null) return false;
+async function isThreadAboutToHide(thread: ThreadChannel): Promise<boolean> {
+	if (thread.archived || thread.autoArchiveDuration == null) return false;
 
-	const hideAt = thread.archiveTimestamp + thread.autoArchiveDuration * 60 * 1000;
+	const recentMessages = await thread.messages.fetch({ limit: 1 });
+	const lastMessage = recentMessages.first();
+	const lastActivityTimestamp = lastMessage?.createdTimestamp ?? thread.createdTimestamp;
+	if (lastActivityTimestamp == null) return false;
+
+	const hideAt = lastActivityTimestamp + thread.autoArchiveDuration * 60 * 1000;
 	return hideAt - Date.now() <= THREAD_REFRESH_WINDOW_MS;
 }
 
 async function refreshManagedThreadVisibility(thread: ThreadChannel): Promise<void> {
 	const currentStatus = extractStatusFromName(thread.name);
-	if (!currentStatus || isLockedStatusThread(thread) || !isThreadAboutToHide(thread)) {
+	if (!currentStatus || isLockedStatusThread(thread) || !(await isThreadAboutToHide(thread))) {
 		return;
 	}
 
-	if (thread.archived) {
-		await thread.setArchived(false, "Keeping non-closed managed thread visible");
-	}
-
 	await ensureStatusButtonsAtBottom(thread, currentStatus);
-}
-
-async function fetchArchivedPublicThreads(channel: TextChannel): Promise<ThreadChannel[]> {
-	const threads: ThreadChannel[] = [];
-	let before: ThreadChannel | undefined;
-
-	while (true) {
-		const archived = await channel.threads.fetchArchived({
-			type: "public",
-			fetchAll: true,
-			before,
-			limit: 100,
-		});
-		const fetchedThreads = [...archived.threads.values()];
-		threads.push(...fetchedThreads);
-
-		if (!archived.hasMore || fetchedThreads.length === 0) {
-			return threads;
-		}
-
-		before = fetchedThreads.at(-1);
-	}
 }
 
 async function keepManagedThreadsVisible(): Promise<void> {
@@ -163,20 +140,8 @@ async function keepManagedThreadsVisible(): Promise<void> {
 				continue;
 			}
 
-			const [activeThreads, archivedThreads] = await Promise.all([
-				channel.threads.fetchActive(),
-				fetchArchivedPublicThreads(channel),
-			]);
-
-			const threads = new Map<string, ThreadChannel>();
+			const activeThreads = await channel.threads.fetchActive();
 			for (const thread of activeThreads.threads.values()) {
-				threads.set(thread.id, thread);
-			}
-			for (const thread of archivedThreads) {
-				threads.set(thread.id, thread);
-			}
-
-			for (const thread of threads.values()) {
 				await refreshManagedThreadVisibility(thread);
 			}
 		} catch (error) {

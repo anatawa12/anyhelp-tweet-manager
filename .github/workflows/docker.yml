@@ -12,6 +12,9 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+concurrency:
+  group: ${{ github.event_name }}-docker-build
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest

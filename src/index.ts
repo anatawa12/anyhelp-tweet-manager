@@ -18,7 +18,7 @@ import {
 	REST,
 	Routes,
 	SlashCommandBuilder,
-	TextThreadChannel,
+	type TextThreadChannel,
 	ThreadAutoArchiveDuration,
 	type ThreadChannel,
 	type User,
@@ -332,7 +332,7 @@ async function handleButtonInteraction(interaction: MessageComponentInteraction)
 
 		// Get the thread
 		const channel = interaction.channel;
-		if (!channel || !channel.isThread()) {
+		if (!channel?.isThread()) {
 			await interaction.reply({
 				content: "This command can only be used in threads.",
 				flags: MessageFlags.Ephemeral,
@@ -470,7 +470,7 @@ async function handleAddStatusButtonsCommand(interaction: CommandInteraction): P
 	try {
 		// Check if in a thread
 		const channel = interaction.channel;
-		if (!channel || !channel.isThread()) {
+		if (!channel?.isThread()) {
 			await interaction.reply({
 				content: "This command can only be used in threads.",
 				flags: MessageFlags.Ephemeral,

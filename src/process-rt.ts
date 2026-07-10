@@ -52,7 +52,7 @@ async function main() {
 		// Fetch the channel
 		const channel = await client.channels.fetch(options.channel);
 
-		if (!channel || !channel.isTextBased() || channel.isDMBased()) {
+		if (!channel?.isTextBased() || channel.isDMBased()) {
 			console.error("Error: Channel not found or is not a text channel");
 			process.exit(1);
 		}
@@ -61,7 +61,7 @@ async function main() {
 		console.log(`Fetching up to ${options.count} messages...`);
 		const allMessages = new Map<string, Message>();
 		let remaining = options.count;
-		let lastMessageId: string | undefined = undefined;
+		let lastMessageId: string | undefined;
 
 		while (remaining > 0) {
 			const batchSize = Math.min(remaining, 100);

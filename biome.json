@@ -1,8 +1,8 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.3.13/schema.json",
+	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
 	"vcs": { "enabled": false, "clientKind": "git", "useIgnoreFile": false },
 	"files": {
-		"includes": ["!dist/**"],
+		"includes": ["**", "!dist"],
 		"ignoreUnknown": false
 	},
 	"formatter": {
@@ -14,7 +14,9 @@
 	},
 	"linter": {
 		"enabled": true,
-		"rules": { "recommended": false },
+		"rules": {
+			"preset": "recommended"
+		},
 		"includes": ["src/**"]
 	},
 	"assist": {

@@ -15,7 +15,7 @@ export async function reportError(client: Client, config: Config, message: strin
 
 	try {
 		const errorChannel = await client.channels.fetch(config.errorChannel);
-		if (!errorChannel || !errorChannel.isTextBased() || errorChannel.isDMBased()) return;
+		if (!errorChannel?.isTextBased() || errorChannel.isDMBased()) return;
 
 		const errorMsg = link ? `${message}\n${link}` : message;
 		await errorChannel.send(errorMsg);
@@ -38,7 +38,7 @@ export async function processVxtMessage(
 	if (!channelConfig) return;
 
 	// Check if this is a reply
-	if (!message.reference || !message.reference.messageId) return;
+	if (!message.reference?.messageId) return;
 
 	try {
 		// Get the original message

@@ -12,7 +12,7 @@
 		"process-rt": "node --env-file=.env dist/process-rt.js"
 	},
 	"dependencies": {
-		"@discordjs/core": "^2.3.0",
+		"@discordjs/core": "^2.5.0",
 		"commander": "^15.0.0",
 		"discord.js": "^14.24.0",
 		"zod": "^4.4.3"

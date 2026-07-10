@@ -4,7 +4,7 @@ ARG TARGETPLATFORM
 ARG TARGETARCH
 
 # Build stage - use BUILDPLATFORM to run build natively on host architecture
-FROM --platform=$BUILDPLATFORM node:22-slim AS builder
+FROM --platform=$BUILDPLATFORM node:24-slim AS builder
 
 # Re-declare args for use in this stage
 ARG TARGETARCH

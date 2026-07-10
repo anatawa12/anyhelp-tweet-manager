@@ -1,0 +1,8 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+  - package-ecosystem: docker
+    directory: /
+  - package-ecosystem: github-actions
+    directory: /

@@ -4,7 +4,7 @@ ARG TARGETPLATFORM
 ARG TARGETARCH
 
 # Build stage - use BUILDPLATFORM to run build natively on host architecture
-FROM --platform=$BUILDPLATFORM node:22-slim AS builder
+FROM --platform=$BUILDPLATFORM node:25-slim AS builder
 
 # Re-declare args for use in this stage
 ARG TARGETARCH
@@ -35,7 +35,7 @@ COPY src ./src
 RUN npm run build
 
 # Runtime stage
-FROM node:22-slim
+FROM node:25-slim
 
 # Copy tini from builder stage
 COPY --from=builder /tini /usr/bin/tini

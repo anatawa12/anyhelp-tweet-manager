@@ -4,11 +4,14 @@ updates:
     directory: /
     schedule: { interval: quarterly }
     open-pull-requests-limit: 100
+    cooldown: { default-days: 7 }
   - package-ecosystem: docker
     directory: /
     schedule: { interval: quarterly }
     open-pull-requests-limit: 100
+    cooldown: { default-days: 7 }
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: quarterly }
     open-pull-requests-limit: 100
+    cooldown: { default-days: 7 }

@@ -151,6 +151,8 @@ async function keepManagedThreadsVisible(): Promise<void> {
 	}
 }
 
+const debounceTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+
 /**
  * Handles new messages to detect and process VXT replies
  * Also handles messages in threads to keep buttons at the bottom
@@ -165,8 +167,14 @@ async function handleMessage(message: Message): Promise<void> {
 
 		// Only handle threads with status tracking
 		if (currentStatus) {
-			// Move status buttons to the bottom
-			await ensureStatusButtonsAtBottom(message.channel, currentStatus);
+			// Move status buttons to the bottom after small delay
+			const existing = debounceTimeouts.get(message.channel.id);
+			if (existing) clearTimeout(existing);
+			const channel = message.channel;
+			const newTimeout = setTimeout(async () => {
+				await ensureStatusButtonsAtBottom(channel, currentStatus);
+			}, 2000);
+			debounceTimeouts.set(message.channel.id, newTimeout);
 		}
 		return;
 	}

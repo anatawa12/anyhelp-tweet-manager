@@ -98,6 +98,7 @@ async function ensureStatusButtonsAtBottom(thread: ThreadChannel, currentStatus:
 	await thread.send({
 		content: STATUS_BUTTON_CONTENT,
 		components: buttons.components.length > 0 ? [buttons] : [],
+		flags: MessageFlags.SuppressNotifications,
 	});
 }
 

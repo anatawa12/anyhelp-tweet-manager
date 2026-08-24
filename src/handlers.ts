@@ -1,6 +1,6 @@
 import type { Client, Message } from "discord.js";
 import type { Config } from "./config.js";
-import { detectRetweet, extractTweetUrl, waitForEmbed } from "./utils.js";
+import { detectNonVRC, detectRetweet, extractTweetUrl, waitForEmbed } from './utils.js';
 
 /**
  * Error reporter function type
@@ -74,6 +74,7 @@ export async function processVxtMessage(
 			await originalMessage.react(config.retweetReaction);
 			// React with ❌ on VXT reply
 			await messageWithEmbed.react("❌");
+			return;
 		} else if (retweetStatus === "unknown") {
 			console.log(`Unknown tweet type, reporting for manual check: ${message.url}`);
 			// Report error for manual check
@@ -91,6 +92,39 @@ export async function processVxtMessage(
 		} else {
 			console.log(`Original tweet detected, no action taken: ${message.url}`);
 			// If it's original, do nothing
+		}
+
+
+		const vrcStatus = detectNonVRC(embed);
+		switch (vrcStatus) {
+			case "non-vrc":
+				console.log(`Non VRC detected: ${message.url}`);
+				// React with configured emoji on original tweet
+				await originalMessage.react(config.nonVrcReaction);
+				// React with ❌ on VXT reply
+				await messageWithEmbed.react("❌");
+				break;
+			case "possibly":
+				// nothing to do
+				break;
+			case "unknown":
+				const vxtMessageLink = `https://discord.com/channels/${message.guildId}/${message.channelId}/${message.id}`;
+				console.log(`Unknown tweet type, reporting for manual check: ${message.url}`);
+				if (errorReporter) {
+					await errorReporter("Cannot determine if tweet is retweet or not. Manual check required.", vxtMessageLink);
+				} else {
+					await reportError(
+						client,
+						config,
+						"Cannot determine if tweet is retweet or not. Manual check required.",
+						vxtMessageLink,
+					);
+				}
+				break;
+			default:
+				// @ts-expect-error: unused
+				const _unused: never = vrcStatus;
+				break;
 		}
 	} catch (error) {
 		console.error("Error processing message:", error);

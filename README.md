@@ -117,6 +117,7 @@ Add status control buttons to existing threads using the `/add-status-buttons` c
      "guild": "your_guild_id",
      "errorChannel": "error_channel_id_or_null",
      "retweetReaction": "1467831704046670080",
+     "nonVrcReaction": "1541241688960274433",
      "channels": {
        "channel_id_to_monitor": {
          "sender": "webhook_user_id_or_null"

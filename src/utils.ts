@@ -48,6 +48,25 @@ export function detectRetweet(tweetUrl: string, embed: Embed): "retweet" | "orig
 }
 
 /**
+ * Checks if a tweet is a retweet by comparing tweet IDs
+ * @param embed - Discord embed from fxtwitter
+ */
+export function detectNonVRC(embed: Embed): "non-vrc" | "possibly" | "unknown" {
+	const description = embed.description;
+	if (!description) return "unknown";
+
+	const extractHashtag = /\[#([^\]]*?)]\(https:\/\/x\.com\/hashtag\/\1\)/g;
+	const extractQuote = /> \*\*.* \\\(\[@(?<id>[a-zA-Z0-9_]+)]\(https:\/\/x\.com\/\k<id>\)\\\) を\[引用]\(https:\/\/x\.com\/\k<id>\/status\/\d+\)\*\*/;
+	const tweetHashTags = Array.from(description.matchAll(extractHashtag).map(x => x[1]));
+
+	if (tweetHashTags.includes("JO1")) return "non-vrc";
+	const quoteUserId = description.match(extractQuote)?.groups?.id;
+	if (quoteUserId == "official_jo1") return "non-vrc";
+
+	return "possibly";
+}
+
+/**
  * Waits for embed to be available on a message
  * @param message - Discord message
  * @returns Message with embed or null if not found

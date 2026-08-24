@@ -6,6 +6,7 @@ const ConfigSchema = z.object({
 	guild: z.string(),
 	errorChannel: z.string().nullable(),
 	retweetReaction: z.string(),
+	nonVrcReaction: z.string(),
 	channels: z.record(
 		z.string(),
 		z.object({

@@ -15,7 +15,7 @@
 		"@discordjs/core": "^2.5.0",
 		"commander": "^15.0.0",
 		"discord.js": "^14.27.0",
-		"zod": "^4.4.3"
+		"zod": "^4.6.5"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.2",

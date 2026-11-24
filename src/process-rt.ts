@@ -11,15 +11,35 @@ program
 	.description("Process RT detection for existing messages on a channel")
 	.requiredOption("-c, --channel <channelId>", "Channel ID to process")
 	.requiredOption("-n, --count <number>", "Number of messages to process", parseInt)
+	.option("-b, --before <messageId>", "Only process messages older than this message ID")
 	.parse(process.argv);
 
-const options = program.opts<{ channel: string; count: number }>();
+const options = program.opts<{ channel: string; count: number; before?: string }>();
 
 // Validate count
 if (options.count <= 0 || !Number.isInteger(options.count)) {
 	console.error("Error: count must be a positive integer");
 	process.exit(1);
 }
+
+// Validate before
+if (options.before !== undefined && !/^\d+$/.test(options.before)) {
+	console.error("Error: before must be a message ID");
+	process.exit(1);
+}
+
+/** The command line options to resume from the current point; updated as messages are processed */
+let resumeHint: string | undefined;
+
+function printResumeHint() {
+	if (resumeHint) console.log(`To resume: ${resumeHint}`);
+}
+
+process.on("SIGINT", () => {
+	console.log("\nInterrupted.");
+	printResumeHint();
+	process.exit(130);
+});
 
 // Load configuration
 const config = await loadConfig();
@@ -46,7 +66,10 @@ async function main() {
 	await client.login(process.env.DISCORD_TOKEN);
 
 	console.log(`Logged in as ${client.user?.tag}`);
-	console.log(`Processing last ${options.count} messages in channel ${options.channel}...`);
+	console.log(
+		`Processing last ${options.count} messages in channel ${options.channel}` +
+			`${options.before ? ` before ${options.before}` : ""}...`,
+	);
 
 	try {
 		// Fetch the channel
@@ -61,7 +84,7 @@ async function main() {
 		console.log(`Fetching up to ${options.count} messages...`);
 		const allMessages = new Map<string, Message>();
 		let remaining = options.count;
-		let lastMessageId: string | undefined;
+		let lastMessageId: string | undefined = options.before;
 
 		while (remaining > 0) {
 			const batchSize = Math.min(remaining, 100);
@@ -96,19 +119,27 @@ async function main() {
 
 		console.log(`Found ${vxtMessages.length} VXT reply messages to process`);
 
+		// Index of each message in the fetched list (newest first), used to compute the remaining count
+		const fetchedIds = Array.from(allMessages.keys());
+
 		// Process each message sequentially to avoid Discord API rate limits
-		let processed = 0;
-		for (const message of vxtMessages) {
-			console.log(`Processing message ${++processed}/${vxtMessages.length}...`);
+		for (let i = 0; i < vxtMessages.length; i++) {
+			const message = vxtMessages[i];
+			console.log(`Processing message ${i + 1}/${vxtMessages.length} (${message.id})...`);
 			// Use stderr-only error reporter for CLI - do not send to Discord
 			await processVxtMessage(client, config, message, options.channel, async (msg, link) => {
 				console.error(`Error: ${msg}${link ? ` - ${link}` : ""}`);
 			});
+
+			const remainingCount = options.count - (fetchedIds.indexOf(message.id) + 1);
+			resumeHint = remainingCount > 0 ? `-c ${options.channel} -n ${remainingCount} -b ${message.id}` : undefined;
+			console.log(`  done.${resumeHint ? ` resume: ${resumeHint}` : ""}`);
 		}
 
 		console.log("Processing complete!");
 	} catch (error) {
 		console.error("Error:", error);
+		printResumeHint();
 		process.exit(1);
 	} finally {
 		client.destroy();

@@ -218,12 +218,18 @@ npm run process-rt -- -c <channelId> -n <count>
 **Options:**
 - `-c, --channel <channelId>`: The Discord channel ID to process (must be in your `settings.json` configuration)
 - `-n, --count <number>`: Number of recent messages to process
+- `-b, --before <messageId>`: Only process messages older than this message ID (optional)
 
 **Example:**
 ```bash
 # Process the last 50 messages in channel 1235990408207536151
 npm run process-rt -- -c 1235990408207536151 -n 50
 ```
+
+**Resuming:**
+After each message is processed, the command prints the options to resume from that point, e.g.
+`resume: -c <channelId> -n 37 -b <messageId>`.
+The same hint is printed when the command is interrupted (Ctrl+C) or fails.
 
 **Notes:**
 - The channel must be configured in your `settings.json` file

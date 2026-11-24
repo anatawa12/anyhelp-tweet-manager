@@ -62,6 +62,7 @@ export function detectNonVRC(embed: Embed): "non-vrc" | "possibly" | "unknown" {
 	if (tweetHashTags.includes("JO1")) return "non-vrc";
 	const quoteUserId = description.match(extractQuote)?.groups?.id;
 	if (quoteUserId == "official_jo1") return "non-vrc";
+	if (/(?<![a-z0-9])JO1(?![a-z0-9])/i.test(description.normalize("NFKC"))) return "non-vrc";
 
 	return "possibly";
 }
